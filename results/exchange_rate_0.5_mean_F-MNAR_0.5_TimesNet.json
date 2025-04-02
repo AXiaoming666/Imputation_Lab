@@ -1,0 +1,24 @@
+{
+    "config": {
+        "seed": 42,
+        "dataset_name": "exchange_rate",
+        "missing_rate": 0.5,
+        "missing_type": "F-MNAR",
+        "completeness_rate": 0.5,
+        "imputation_method": "mean",
+        "forecast_model": "TimesNet"
+    },
+    "imputed_metrics": {
+        "RMSE": 0.20019964226921064,
+        "MAE": 0.20019964226921064,
+        "R2": 0.7746295876116052,
+        "KL divergence": 0.05489456242614299,
+        "KS statistic": 0.16088782737605006,
+        "W2 distance": 2.2811115158006778e-09,
+        "Sliced Wasserstein distance": 1.0126016927625517e-09
+    },
+    "forecast_metrics": {
+        "mse": 0.1590578407049179,
+        "mae": 0.2915828227996826
+    }
+}

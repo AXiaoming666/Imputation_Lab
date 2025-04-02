@@ -1,0 +1,24 @@
+{
+    "config": {
+        "seed": 42,
+        "dataset_name": "exchange_rate",
+        "missing_rate": 0.4,
+        "missing_type": "MAR",
+        "completeness_rate": 0.7,
+        "imputation_method": "IIM",
+        "forecast_model": "TimesNet"
+    },
+    "imputed_metrics": {
+        "RMSE": 0.01221960185941619,
+        "MAE": 0.01221960185941619,
+        "R2": 0.9961797876359397,
+        "KL divergence": 0.006576941414682991,
+        "KS statistic": 0.02007494646680942,
+        "W2 distance": 1.056287404518025e-09,
+        "Sliced Wasserstein distance": 4.452860623630529e-11
+    },
+    "forecast_metrics": {
+        "mse": 0.10213006287813187,
+        "mae": 0.23332561552524567
+    }
+}
