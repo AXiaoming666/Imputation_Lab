@@ -34,24 +34,20 @@ for col in df.columns:
 mse_base = 0.10529112070798874
 mae_base = 0.23513168096542358
 
-""" pd.set_option('display.max_columns', None)
+pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', None)
 pd.set_option('display.width', 1000)
 pd.set_option('display.max_colwidth', None)
 
-model_formula = 'forecast_metrics_mse ~ config_missing_rate * C(config_missing_type) * config_completeness_rate * C(config_imputation_method)'
+model_formula = 'forecast_metrics_mse ~ config_missing_rate + C(config_missing_type) + config_completeness_rate + C(config_imputation_method)'
 model = ols(model_formula, data=df_renamed).fit()
-anova_results = sm.stats.anova_lm(model, typ=3)
-significant_results = anova_results[anova_results['PR(>F)'] < 0.05]
-significant_results = significant_results.sort_values(by='PR(>F)', ascending=True)
-print(significant_results)
+anova_results = sm.stats.anova_lm(model, typ=2)
+print(anova_results)
 
-model_formula = 'forecast_metrics_mae ~ config_missing_rate * C(config_missing_type) * config_completeness_rate * C(config_imputation_method)'
+model_formula = 'forecast_metrics_mae ~ config_missing_rate + C(config_missing_type) + config_completeness_rate + C(config_imputation_method)'
 model = ols(model_formula, data=df_renamed).fit()
-anova_results = sm.stats.anova_lm(model, typ=3)
-significant_results = anova_results[anova_results['PR(>F)'] < 0.05]
-significant_results = significant_results.sort_values(by='PR(>F)', ascending=True)
-print(significant_results)
+anova_results = sm.stats.anova_lm(model, typ=2)
+print(anova_results)
 
 model_formula = 'forecast_metrics_mse ~ imputed_metrics_RMSE + imputed_metrics_MAE + imputed_metrics_R2 + imputed_metrics_KL_divergence' + \
                 '+ imputed_metrics_KS_statistic + imputed_metrics_W2_distance + imputed_metrics_Sliced_Wasserstein_distance'
@@ -66,23 +62,7 @@ anova_results = sm.stats.anova_lm(model, typ=2)
 print(anova_results)
 
 
-# 针对二阶交互作用的可视化（例如missing_rate和imputation_method的交互）
-plt.figure(figsize=(10, 6))
-interaction_plot = sns.lineplot(
-    data=df_renamed,
-    x='config_completeness_rate',
-    y='forecast_metrics_mse',
-    hue='config_imputation_method',
-    errorbar=('ci', 95)
-)
-# Add horizontal line for baseline MSE
-plt.axhline(y=mse_base, color='r', linestyle='--', label=f'Baseline MSE: {mse_base:.4f}')
-plt.legend()
-plt.title('Missing Rate × Imputation Method Interaction Effect on MSE')
-plt.savefig('interaction_plot.png') """
-
-
-def new_func(
+""" def new_func(
     config_param='missing_rate',
     metrics_param='mse',
     aborted_methods=None,
@@ -157,4 +137,4 @@ def new_func(
 for config_param in ['missing_rate', 'completeness_rate', 'missing_type']:
     for metrics_param in ['mse', 'mae']:
         for aborted_methods, point_size in [(None, 1), (['mean'], 10), (['knn', 'mean', 'xgboost', 'IIM'], 100)]:
-            new_func(config_param=config_param, metrics_param=metrics_param, aborted_methods=aborted_methods, point_size=point_size)
+            new_func(config_param=config_param, metrics_param=metrics_param, aborted_methods=aborted_methods, point_size=point_size) """
