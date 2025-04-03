@@ -27,7 +27,7 @@ def Evaluate(data_original, data_imputed):
 
 
 def calculate_RMSE(data_original, data_imputed):
-    return np.sqrt((data_original - data_imputed) ** 2).mean()
+    return np.sqrt(((data_original - data_imputed) ** 2).mean())
 
 
 def calculate_MAE(data_original, data_imputed):
