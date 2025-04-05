@@ -120,7 +120,7 @@ def IIM_adaptive(data_with_missing):
         return np.sqrt(np.mean((data_with_missing[complete_sample_idx, :] - data_imputed) ** 2))
 
     study = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(multivariate=True))
-    study.optimize(objective, n_trials=100)
+    study.optimize(objective, n_trials=100, n_jobs=2)
     alpha = study.best_params['alpha']
     k = study.best_params['k']
     data = IIM(data_with_missing, alpha, k)

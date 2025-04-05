@@ -29,6 +29,22 @@ def main():
         "completeness_rate": args.completeness_rate,
         "imputation_method": args.imputation_method,
     }
+    
+    name = "{}_{}_{}_{}_{}_TimesNet.json".format(
+        config['dataset_name'],
+        config['missing_rate'],
+        config['imputation_method'],
+        config['missing_type'],
+        config['completeness_rate']
+    )
+    
+    for foldername, subfolders, filenames in os.walk('./results'):
+        for filename in filenames:
+            if filename == name:
+                with open(os.path.join(foldername, filename), 'r', encoding='utf-8') as file:
+                    data = json.load(file)
+                    if data['imputed_metrics']['RMSE'] != data['imputed_metrics']['MAE']:
+                        return
 
 
     np.random.seed(config['seed'])
@@ -53,21 +69,13 @@ def main():
     
     RMSE = np.sqrt(((data.get_y_train_complete() - data.separate_time_features(data_imputed)) ** 2).mean())
     
-    name = "{}_{}_{}_{}_{}_{}.json".format(
-        config['dataset_name'],
-        config['missing_rate'],
-        config['imputation_method'],
-        config['missing_type'],
-        config['completeness_rate'],
-        config['forecast_model']
-    )
-    
     for foldername, subfolders, filenames in os.walk('./results'):
         for filename in filenames:
             if filename == name:
                 with open(os.path.join(foldername, filename), 'r', encoding='utf-8') as file:
                     data = json.load(file)
                     data['imputed_metrics']['RMSE'] = RMSE
+                with open(os.path.join(foldername, filename), 'w', encoding='utf-8') as file:
                     json.dump(data, file, indent=4)
 
 if __name__ == '__main__':
