@@ -1,5 +1,7 @@
 import numpy as np
 import optuna
+from scipy.spatial.distance import cdist
+from joblib import Parallel, delayed
 
 max_search_l = 20
 max_search_k = 20
@@ -21,7 +23,7 @@ def IIM(data_with_missing, alpha, k):
 
 
     def Nearest_Neighbours(sample_idx, k):
-        distance = np.linalg.norm(data[complete_sample_idx, :][:, complete_feature_idx] - data[sample_idx, complete_feature_idx], axis=1)
+        distance = cdist(data[complete_sample_idx, :][:, complete_feature_idx], data[sample_idx, complete_feature_idx].reshape(1, -1), metric='euclidean').flatten()
         nearest_neighbours_idx = complete_sample_idx[np.argsort(distance)[:k]]
         return nearest_neighbours_idx
             
@@ -52,8 +54,7 @@ def IIM(data_with_missing, alpha, k):
 
 
     def Combine(candidate):
-        diff = candidate[:, np.newaxis, :] - candidate[np.newaxis, :, :]
-        distance = np.sum(np.linalg.norm(diff, axis=2), axis=1)
+        distance = np.sum(np.sqrt(np.sum((candidate[:, np.newaxis, :] - candidate[np.newaxis, :, :]) ** 2, axis=2)), axis=1)
         weight = 1 / (distance + 1e-10)
         weight = weight / np.sum(weight, axis=0)
         data_imputed = weight @ candidate
@@ -119,9 +120,17 @@ def IIM_adaptive(data_with_missing):
         data_imputed = IIM(data_train, alpha, k)
         return np.sqrt(np.mean((data_with_missing[complete_sample_idx, :] - data_imputed) ** 2))
 
-    study = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(multivariate=True))
-    study.optimize(objective, n_trials=100, n_jobs=2)
+    def optimize(n_trials):
+        study = optuna.load_study(study_name='mystudy', storage='sqlite:///example.db')
+        study.optimize(objective, n_trials=n_trials)
+
+    study = optuna.create_study(study_name='mystudy', direction='minimize',
+                                sampler=optuna.samplers.TPESampler(multivariate=True),
+                                storage='sqlite:///example.db',
+                                )
+    r = Parallel(n_jobs=-1)([delayed(optimize)(10) for _ in range(10)])
     alpha = study.best_params['alpha']
     k = study.best_params['k']
+    optuna.delete_study(study_name="mystudy", storage="sqlite:///example.db")
     data = IIM(data_with_missing, alpha, k)
     return data
