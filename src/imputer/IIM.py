@@ -127,6 +127,7 @@ def IIM_adaptive(data_with_missing):
     study = optuna.create_study(study_name='mystudy', direction='minimize',
                                 sampler=optuna.samplers.TPESampler(multivariate=True),
                                 storage='sqlite:///example.db',
+                                load_if_exists=True
                                 )
     r = Parallel(n_jobs=-1)([delayed(optimize)(10) for _ in range(10)])
     alpha = study.best_params['alpha']

@@ -9,7 +9,7 @@
         "forecast_model": "TimesNet"
     },
     "imputed_metrics": {
-        "RMSE": 0.153812614150656,
+        "RMSE": 0.375124829654914,
         "MAE": 0.153812614150656,
         "R2": 0.871482681323559,
         "KL divergence": 0.037331613650139275,
