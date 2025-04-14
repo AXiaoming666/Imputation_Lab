@@ -35,74 +35,85 @@ mae_base = 0.23513168096542358
 def scatter_plot(
     config_param='missing_rate',
     metrics_param='mse',
-    aborted_methods=None,
-    point_size=1,
+    aborted_methods=None
 ):
-    mse_means = {}
-    mae_means = {}
-    mse_stds = {}
-    mae_stds = {}
-    for imputation_method in df_renamed['config_imputation_method'].unique():
-        for config in df_renamed[f'config_{config_param}'].unique():
-            subset = df_renamed[(df_renamed['config_imputation_method'] == imputation_method) & 
-                                (df_renamed[f'config_{config_param}'] == config)]
-            if subset.empty:
-                continue
-            mse_means[(imputation_method, config)] = subset['forecast_metrics_mse'].mean()
-            mse_stds[(imputation_method, config)] = subset['forecast_metrics_mse'].std()
-            mae_means[(imputation_method, config)] = subset['forecast_metrics_mae'].mean()
-            mae_stds[(imputation_method, config)] = subset['forecast_metrics_mae'].std()
-            
     fig, ax = plt.subplots(figsize=(10, 6))
 
     configs = sorted(df_renamed[f'config_{config_param}'].unique())
     imputation_methods = sorted(df_renamed['config_imputation_method'].unique())
-    if not aborted_methods is None:
+    if aborted_methods is not None:
         imputation_methods = [method for method in imputation_methods if method not in aborted_methods]
     
     colors = plt.cm.tab10(range(len(imputation_methods)))
     color_dict = dict(zip(imputation_methods, colors))
 
-    y_positions = range(len(configs))
-    ax.set_yticks(y_positions)
-    ax.set_yticklabels(configs)
-
-    if metrics_param == 'mse':
-        metrics_means = mse_means
-        metrics_stds = mse_stds
-        metrics_base = mse_base
-    elif metrics_param == 'mae':
-        metrics_means = mae_means
-        metrics_stds = mae_stds
-        metrics_base = mae_base
+    # Set up the plot
+    ax.set_ylabel(metrics_param.upper())
+    ax.set_xlabel(config_param.replace("_", " ").title())
+    ax.set_title(f'{metrics_param.upper()} by Imputation Method and {config_param.replace("_", " ").title()}')
+    
+    # Group data for box plot
+    grouped_data = []
+    labels = []
+    positions = []
+    
+    # Calculate positions for proper alignment
+    method_count = len(imputation_methods)
+    box_width = 0.8  # width of each box
+    group_width = box_width * method_count
     
     for i, config in enumerate(configs):
-        for imputation_method in imputation_methods:
-            if (imputation_method, config) in metrics_means:
-                ax.scatter(
-                metrics_means[(imputation_method, config)], 
-                i,
-                s=metrics_stds[(imputation_method, config)] * 1000 * point_size,
-                color=color_dict[imputation_method],
-                label=f'{imputation_method}' if i == 0 else "",
-                alpha=0.7
-                )
-
-    ax.axvline(x=metrics_base, color='r', linestyle='--', label=f'Baseline {metrics_param.upper()}: {metrics_base:.4f}')
-
-    handles, labels = plt.gca().get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
-
-    legend = ax.legend(by_label.values(), by_label.keys(), loc='best')
-
-    for handle in legend.legend_handles:
-        if isinstance(handle, matplotlib.collections.PathCollection):
-            handle.set_sizes([100])
-
-    ax.set_xlabel(metrics_param.upper())
-    ax.set_title(f'{metrics_param.upper()} Means by Imputation Method and {config_param.replace("_", " ").title()}')
+        config_center = i  # Center of each config group
+        
+        for j, imputation_method in enumerate(imputation_methods):
+            # Position each boxplot within its config group
+            position = config_center + (j - method_count/2 + 0.5) * box_width / method_count
+            
+            subset = df_renamed[(df_renamed['config_imputation_method'] == imputation_method) & 
+                                (df_renamed[f'config_{config_param}'] == config)]
+            if not subset.empty:
+                if metrics_param == 'mse':
+                    data = subset['forecast_metrics_mse']
+                elif metrics_param == 'mae':
+                    data = subset['forecast_metrics_mae']
+                
+                grouped_data.append(data)
+                labels.append(f"{imputation_method}_{config}")
+                positions.append(position)
+    
+    # Create box plot
+    boxplot = ax.boxplot(grouped_data, positions=positions, patch_artist=True, 
+                         showfliers=False, widths=box_width/method_count*0.9)
+    
+    # Color boxes by imputation method
+    method_boxes = {}
+    for i, (box, label) in enumerate(zip(boxplot['boxes'], labels)):
+        method = label.split('_')[0]
+        box.set(facecolor=color_dict[method])
+        if method not in method_boxes:
+            method_boxes[method] = box
+    
+    # Add baseline line
+    metrics_base = mse_base if metrics_param == 'mse' else mae_base
+    ax.axhline(y=metrics_base, color='r', linestyle='--', 
+               label=f'Baseline {metrics_param.upper()}: {metrics_base:.4f}')
+    
+    # Set x-ticks at the center of each config group
+    ax.set_xticks(range(len(configs)))
+    ax.set_xticklabels(configs)
+    
+    # Create custom legend for imputation methods
+    handles = [method_boxes[method] for method in imputation_methods]
+    ax.legend(handles, imputation_methods, loc='best')
+    
+    # Add a grid for better readability
+    ax.grid(True, linestyle='--', alpha=0.7)
+    
     plt.tight_layout()
-    plt.savefig(f'./visualization/{metrics_param.upper()}_{config_param}_without_{aborted_methods}.png')
+    
+    # Create filename with proper handling of None
+    aborted_str = "" if aborted_methods is None else f"_without_{'_'.join(aborted_methods)}"
+    plt.savefig(f'./visualization/{metrics_param.upper()}_{config_param}{aborted_str}.png')
     plt.close(fig)
 
 
@@ -180,8 +191,8 @@ def box_plot():
 
 if __name__ == "__main__":
     os.makedirs('./visualization', exist_ok=True)
-    """ for config_param in ['missing_rate', 'completeness_rate', 'missing_type']:
+    for config_param in ['missing_rate', 'completeness_rate', 'missing_type']:
         for metrics_param in ['mse', 'mae']:
-            for aborted_methods, point_size in [(None, 1), (['mean'], 10), (['knn', 'mean', 'xgboost', 'IIM'], 100)]:
-                scatter_plot(config_param=config_param, metrics_param=metrics_param, aborted_methods=aborted_methods, point_size=point_size) """
+            for aborted_methods in [None, ['mean'], ['knn', 'mean', 'xgboost', 'IIM']]:
+                scatter_plot(config_param=config_param, metrics_param=metrics_param, aborted_methods=aborted_methods)
     box_plot()

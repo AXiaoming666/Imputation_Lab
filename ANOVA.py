@@ -23,17 +23,25 @@ def calculate_and_plot_partial_r2(formula, data, typ, title):
     
     # Create plot
     plt.figure(figsize=(10, 6))
-    ax = sns.barplot(x=partial_r2['Partial_R2'], y=partial_r2.index, palette='viridis')
+    ax = sns.barplot(x=partial_r2['Partial_R2'], y=partial_r2.index, palette='viridis', hue=partial_r2.index, legend=False)
     plt.title(title)
     plt.xlabel('Partial R²')
     plt.ylabel('Factors')
     plt.tight_layout()
     
     # Add values to end of bars
-    for i, v in enumerate(partial_r2['Partial_R2']):
-        ax.text(v + 0.01, i, f"{v:.4f}", va='center')
+    # Add values to end of bars for most bars, but put max value inside the bar
+    max_idx = partial_r2['Partial_R2'].idxmax()
+    for i, (idx, v) in enumerate(zip(partial_r2.index, partial_r2['Partial_R2'])):
+        if idx == max_idx:
+            # For max value, place text inside the bar with contrasting color
+            ax.text(v - 0.001, i, f"{v:.4f}", va='center', ha='right')
+        else:
+            # For other values, keep them at the end of bars
+            ax.text(v + 0.001, i, f"{v:.4f}", va='center')
     
-    plt.show()
+    plt.savefig(f'./visualization/{title.replace(" ", "_")}.png', dpi=300)
+    plt.close()
     
     return partial_r2
 
