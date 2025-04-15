@@ -1,49 +1,70 @@
-import torch
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
+import random
 matplotlib.use('Agg')
 
-def FFT_for_Period(x, k=2):
-    xf = torch.fft.rfft(x, dim=1)
-    frequency_list = abs(xf).mean(0).mean(-1)
-    frequency_list[0] = 0
-    
-    n = x.shape[1]
-    
-    values, indices = torch.topk(frequency_list, k)
-    
-    plt.figure(figsize=(10, 6))
-    freq = np.linspace(0, n//2+1, len(frequency_list))
-    
-    plt.plot(freq, frequency_list.detach().cpu().numpy())
-    
-    # Calculate x-axis range based on peak frequencies
-    min_freq = max(0, min(freq[indices]) - 10)
-    max_freq = min(n//2, max(freq[indices]) + 10)
-    plt.xlim(min_freq, max_freq)
-    
-    # 标注峰值
-    for i, (idx, val) in enumerate(zip(indices, values)):
-        plt.plot(freq[idx], val.item(), 'ro')  # 红点标记峰值
-        plt.annotate(f'Peak {i+1}\n(f={freq[idx]:.1f})',  # 添加标注
-                    xy=(freq[idx], val.item()),
-                    xytext=(10, 10),
-                    textcoords='offset points')
-    
-    plt.title('Frequency Domain')
-    plt.xlabel('Frequency')
-    plt.ylabel('Amplitude')
-    plt.grid(True)
-    plt.savefig('frequency_domain.png')
-    plt.close()
-    
-    period = x.shape[1] // indices
-    return period, abs(xf).mean(-1)[:, indices]
+from src.data_loading import DataLoader
+from src.missing_simulation import MissingSimulation
+from src.imputer import *
+from src.evaluation_metrics import Evaluate
 
-data = pd.read_csv('./Time-Series-Library/dataset/weather/weather.csv')
-data = data.values[:, 1:].astype(np.float64)
-data = data.reshape(1, data.shape[0], data.shape[1])
-data = torch.tensor(data, dtype=torch.float64)
-print(FFT_for_Period(data, 5))
+
+np.random.seed(42)
+random.seed(42)
+
+data = DataLoader("exchange_rate")
+MissingSimulation(data, 0.9, "MCAR", 0.1)
+
+data_imputed = forward_impute(data.get_incomplete_data())
+
+complete_data = data.get_y_train_complete()
+imputed_data = data.separate_time_features(data_imputed)
+
+fft_complete = np.fft.fft(complete_data)
+fft_imputed = np.fft.fft(imputed_data)
+
+fft_complete = np.mean(np.abs(fft_complete), axis=1)
+fft_imputed = np.mean(np.abs(fft_imputed), axis=1)
+
+n = len(complete_data)
+
+fft_complete = fft_complete[:n // 2]
+fft_imputed = fft_imputed[:n // 2]
+
+plt.figure(figsize=(12, 6))
+
+# Original plots
+plt.subplot(2, 1, 1)
+plt.plot(range(0, n // 2), fft_complete, label='Complete Data', alpha=0.7)
+plt.plot(range(0, n // 2), fft_imputed, label='Imputed Data', alpha=0.7, linestyle='--')
+
+# Find top 5 amplitudes for complete data
+top5_complete_idx = np.argsort(fft_complete)[-5:]
+top5_complete_val = fft_complete[top5_complete_idx]
+plt.scatter(top5_complete_idx, top5_complete_val, color='red', s=50, marker='o', 
+            label='Top 5 Complete', zorder=5)
+
+# Find top 5 amplitudes for imputed data
+top5_imputed_idx = np.argsort(fft_imputed)[-5:]
+top5_imputed_val = fft_imputed[top5_imputed_idx]
+plt.scatter(top5_imputed_idx, top5_imputed_val, color='blue', s=50, marker='x',
+            label='Top 5 Imputed', zorder=5)
+
+plt.title('FFT Comparison: Complete vs Imputed Data')
+plt.ylabel('Magnitude')
+plt.legend()
+plt.grid(True)
+
+# Difference plot
+plt.subplot(2, 1, 2)
+plt.plot(range(0, n // 2), fft_complete - fft_imputed, color='red', label='Difference (Complete - Imputed)')
+plt.title('Difference between Complete and Imputed FFT')
+plt.xlabel('Period by days')
+plt.ylabel('Magnitude Difference')
+plt.legend()
+plt.grid(True)
+
+plt.tight_layout()
+plt.savefig('fft_comparison.png')
+plt.close()
