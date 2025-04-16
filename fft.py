@@ -79,6 +79,7 @@ for idx in top5_imputed_idx:
     plt.plot([idx, idx], [0, fft_imputed[idx]], 'g--', linewidth=0.8)
 
 plt.xlim(zoom_start, zoom_end)
+plt.ylim(3.6, 4.1)
 plt.title('Zoomed-in FFT Comparison (Top 5 Periods Marked)')
 plt.xlabel('Period by days')
 plt.ylabel('Magnitude')
