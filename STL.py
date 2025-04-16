@@ -24,6 +24,12 @@ seasonal = result.seasonal
 trend = result.trend
 resid = result.resid
 
+trend_strength = 1 - (np.var(resid) / np.var(trend + resid))
+seasonal_strength = 1 - (np.var(resid) / np.var(seasonal + resid))
+
+print(f"Trend Strength: {trend_strength:.4f}")
+print(f"Seasonal Strength: {seasonal_strength:.4f}")
+
 # 绘制原始数据及其分解成分
 plt.figure(figsize=(14, 8))
 
