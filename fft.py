@@ -42,14 +42,17 @@ plt.plot(range(0, n // 2), fft_imputed, label='Imputed Data', alpha=0.7, linesty
 # Find top 5 amplitudes for complete data
 top5_complete_idx = np.argsort(fft_complete)[-5:]
 top5_complete_val = fft_complete[top5_complete_idx]
-plt.scatter(top5_complete_idx, top5_complete_val, color='red', s=50, marker='o', 
-            label='Top 5 Complete', zorder=5)
 
 # Find top 5 amplitudes for imputed data
 top5_imputed_idx = np.argsort(fft_imputed)[-5:]
 top5_imputed_val = fft_imputed[top5_imputed_idx]
-plt.scatter(top5_imputed_idx, top5_imputed_val, color='blue', s=50, marker='x',
-            label='Top 5 Imputed', zorder=5)
+
+print("Top 5 Amplitudes for Complete Data:")
+for i in range(5):
+    print(f"Index: {top5_complete_idx[i]}, Value: {top5_complete_val[i]}")
+print("Top 5 Amplitudes for Imputed Data:")
+for i in range(5):
+    print(f"Index: {top5_imputed_idx[i]}, Value: {top5_imputed_val[i]}")
 
 plt.title('FFT Comparison: Complete vs Imputed Data')
 plt.ylabel('Magnitude')
