@@ -1,2 +1,5 @@
 [pull]
     rebase = true
+
+[core]
+    filemode = false

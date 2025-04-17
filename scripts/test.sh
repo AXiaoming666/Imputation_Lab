@@ -1,10 +1,10 @@
 /home/cxz/anaconda3/envs/myenv/bin/python main.py \
     --seed 42 \
     --dataset_name exchange_rate \
-    --missing_rate 0.9 \
-    --missing_type MCAR \
+    --missing_rate 0.8 \
+    --missing_type F-MNAR \
     --completeness_rate 0.1 \
-    --imputation_method xgboost
+    --imputation_method knn
 
 cd Time-Series-Library
 
@@ -40,7 +40,6 @@ cd ..
 
 /home/cxz/anaconda3/envs/myenv/bin/python catch_results.py TimesNet
 
-rm imputed_data.csv
 rm config.npy
 rm metrics.npy
 rm Time-Series-Library/result_long_term_forecast.txt
