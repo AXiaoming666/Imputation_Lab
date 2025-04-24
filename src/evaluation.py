@@ -83,7 +83,7 @@ def calculate_W2_distance(dev_set: np.ndarray, imputed_set: np.ndarray, batch_si
         imputed_set_batch = imputed_set[i]
         w2_distance += calculate_W2_distance_batch(dev_set_batch, imputed_set_batch)
     
-    return w2_distance
+    return w2_distance / batch_num
 
 
 def calculate_W2_distance_batch(dev_set: np.ndarray, imputed_set: np.ndarray) -> float:
