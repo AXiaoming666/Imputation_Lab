@@ -24,7 +24,9 @@ def TSLib(args: argparse.Namespace) -> subprocess.CompletedProcess:
                "--factor", "3",
                "--des", "\'Exp\'",
                "--itr", "1",
-               "--inverse"]
+               "--inverse",
+               "--d_model", "64",
+               "--d_ff", "64"]
     
     if args.missing_rate == 0:
         if args.dataset == "exchange_rate":
@@ -46,27 +48,21 @@ def TSLib(args: argparse.Namespace) -> subprocess.CompletedProcess:
                     "--pred_len", "96",
                     "--enc_in", "8",
                     "--dec_in", "8",
-                    "--c_out", "8",
-                    "--d_model", "64",
-                    "--d_ff", "64"]
+                    "--c_out", "8"]
     elif args.dataset == "illness":
         command += ["--seq_len", "36",
                     "--label_len", "18",
                     "--pred_len", "24",
                     "--enc_in", "7",
                     "--dec_in", "7",
-                    "--c_out", "7",
-                    "--d_model", "768",
-                    "--d_ff", "768"]
+                    "--c_out", "7"]
     elif args.dataset == "traffic":
         command += ["--seq_len", "96",
                     "--label_len", "48",
                     "--pred_len", "96",
                     "--enc_in", "862",
                     "--dec_in", "862",
-                    "--c_out", "862",
-                    "--d_model", "512",
-                    "--d_ff", "512"]
+                    "--c_out", "862"]
     
     if args.forecast_model == "TimesNet":
         command += ["--e_layers", "2",
@@ -113,10 +109,9 @@ def save_results(args: argparse.Namespace, imputed_metrics: dict|None, imputed_s
     
     result_path = f"./results/{args.dataset}/"
     os.makedirs(result_path, exist_ok=True)
-    if not os.path.exists(result_path + "pred_true.npy"):
-        np.save(result_path + "pred_true.npy", pred_true)
     
     if args.missing_rate == 0:
+        np.save(result_path + "pred_true.npy", pred_true)
         result_path += f"ground/{args.forecast_model}/"
         os.makedirs(result_path, exist_ok=True)
         np.save(result_path + "pred.npy", pred)
@@ -127,7 +122,7 @@ def save_results(args: argparse.Namespace, imputed_metrics: dict|None, imputed_s
             args.missing_rate,
             args.missing_type,
             args.complete_num if args.dataset != "traffic" else args.complete_rate,
-            args.imputer,
+            args.imputer
         )
         os.makedirs(result_path, exist_ok=True)
         imputed_set.to_csv(result_path + "imputed_set.csv", index=False)
