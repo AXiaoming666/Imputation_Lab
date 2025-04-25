@@ -95,11 +95,11 @@ def get_TSLib_output() -> tuple[np.ndarray, np.ndarray, dict]:
     metrics = np.load(subdir + "/metrics.npy")
     pred = np.load(subdir + "/pred.npy")
     true = np.load(subdir + "/true.npy")
-    metrics = {"pred": {"mae": metrics[0],
+    metrics = {"mae": metrics[0],
                "mse": metrics[1],
                "rmse": metrics[2],
                "mape": metrics[3],
-               "mspe": metrics[4]}}
+               "mspe": metrics[4]}
     pred = TSLib_output2TS(pred)
     true = TSLib_output2TS(true)
     return pred, true, metrics
@@ -115,7 +115,7 @@ def save_results(args: argparse.Namespace, imputed_metrics: dict|None, imputed_s
         result_path += f"ground/{args.forecast_model}/"
         os.makedirs(result_path, exist_ok=True)
         np.save(result_path + "pred.npy", pred)
-        np.save(result_path + "metrics.npy", pred_metrics)
+        np.save(result_path + "pred_metrics.npy", pred_metrics)
     else:
         result_path = "./results/{}/{}_{}_{}_{}/".format(
             args.dataset,
@@ -125,9 +125,12 @@ def save_results(args: argparse.Namespace, imputed_metrics: dict|None, imputed_s
             args.imputer
         )
         os.makedirs(result_path, exist_ok=True)
-        imputed_set.to_csv(result_path + "imputed_set.csv", index=False)
-        metrics = {"impute": imputed_metrics} | pred_metrics
-        np.save(result_path + "metrics.npy", metrics)
+        np.save(result_path + "imputed_set.npy", imputed_set.to_numpy())
+        np.save(result_path + "imputed_metrics.npy", imputed_metrics)
+        
+        result_path += args.forecast_model + "/"
+        os.makedirs(result_path, exist_ok=True)
+        np.save(result_path + "pred_metrics.npy", pred_metrics)
         np.save(result_path + "pred.npy", pred)
     
 def delete_temp() -> None:

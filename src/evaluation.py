@@ -12,6 +12,8 @@ def data2distribution(data):
 
 
 def Evaluate(dev_set: pd.DataFrame, imputed_set: pd.DataFrame) -> dict:
+    imputed_set = imputed_set[dev_set.columns]
+    
     assert dev_set.shape == imputed_set.shape, "data and imputed_set must have the same shape"
     assert not np.any(np.isnan(imputed_set)), "imputed_set must not contain any NaN values"
     

@@ -79,7 +79,7 @@ class DataLoader:
         self.missing_set[self.mask] = np.nan
     
     def get_missing_set(self) -> pd.DataFrame:
-        return self.missing_set
+        return pd.concat([self.time_features, self.missing_set], axis=1)
     
     def fix_missing(self, imputed_data: pd.DataFrame) -> None:
         self.imputed_set = imputed_data[self.dev_set.columns].copy(deep=True)
