@@ -10,7 +10,7 @@ def check_if_run(args: dict) -> bool:
         result_path += f"ground/{args['forecast_model']}/"
         if not os.path.exists(result_path + "pred.npy"):
             return False
-        if not os.path.exists(result_path + "metrics.npy"):
+        if not os.path.exists(result_path + "pred_metrics.npy"):
             return False
     else:
         result_path = "./results/{}/{}_{}_{}_{}/".format(
@@ -22,7 +22,10 @@ def check_if_run(args: dict) -> bool:
         )
         if not os.path.exists(result_path + "imputed_set.csv"):
             return False
-        if not os.path.exists(result_path + "metrics.npy"):
+        if not os.path.exists(result_path + "imputed_metrics.npy"):
+            return False
+        result_path += args["forecast_model"] + "/"
+        if not os.path.exists(result_path + "pred_metrics.npy"):
             return False
         if not os.path.exists(result_path + "pred.npy"):
             return False

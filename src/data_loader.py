@@ -92,3 +92,16 @@ class DataLoader:
         processed_data.iloc[:self.n_sample_dev, 1:] = self.imputed_set.copy(deep=True) * self.std + self.mean
         os.makedirs("./temp/", exist_ok=True)
         processed_data.to_csv(f"./temp/processed_data.csv", index=False)
+    
+    def load_imputed_data(self) -> None:
+        result_path = "./results/{}/{}_{}_{}_{}/".format(
+            self.args.dataset,
+            self.args.missing_rate,
+            self.args.missing_type,
+            self.args.complete_num if self.args.dataset != "traffic" else self.args.complete_rate,
+            self.args.imputer
+        )
+        imputed_set = np.load(result_path + "imputed_set.npy")
+        imputed_set = pd.DataFrame(imputed_set, columns=self.dev_set.columns)
+        imputed_set = (imputed_set - self.mean) / self.std
+        self.imputed_set = imputed_set.copy(deep=True)

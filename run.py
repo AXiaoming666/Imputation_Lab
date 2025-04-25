@@ -162,6 +162,21 @@ def delete_temp() -> None:
         os.remove("./Time-Series-Library/result_long_term_forecast.txt")
     else:
         print("result_long_term_forecast.txt does not exist.")
+        
+def check_if_imputed(args: argparse.Namespace) -> bool:
+
+    result_path = "./results/{}/{}_{}_{}_{}/".format(
+        args.dataset,
+        args.missing_rate,
+        args.missing_type,
+        args.complete_num if args.dataset != "traffic" else args.complete_rate,
+        args.imputer
+    )
+    if not os.path.exists(result_path + "imputed_set.npy"):
+        return False
+    if not os.path.exists(result_path + "imputed_metrics.npy"):
+        return False
+    return True
 
 if __name__ == "__main__":
     fix_seed = 42
@@ -188,16 +203,20 @@ if __name__ == "__main__":
     else:
         data = DataLoader(args)
         
-        MissingSimulation(data, args)
-        
-        missing_set = data.get_missing_set()
-        
-        imputed_set = impute(missing_set, method=args.imputer)
-        
-        data.fix_missing(imputed_set)
-        
-        imputed_metrics = Evaluate(data.get_dev_set(), imputed_set)
-        
+        if check_if_imputed(args):
+            print("Already imputed")
+            data.load_imputed_data()
+        else:
+            MissingSimulation(data, args)
+            
+            missing_set = data.get_missing_set()
+            
+            imputed_set = impute(missing_set, method=args.imputer)
+            
+            data.fix_missing(imputed_set)
+            
+            imputed_metrics = Evaluate(data.get_dev_set(), imputed_set)
+            
         data.save_processed_data()
         
         TSLib(args)
