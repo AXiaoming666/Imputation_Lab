@@ -125,8 +125,9 @@ def save_results(args: argparse.Namespace, imputed_metrics: dict|None, imputed_s
             args.imputer
         )
         os.makedirs(result_path, exist_ok=True)
-        np.save(result_path + "imputed_set.npy", imputed_set.to_numpy())
-        np.save(result_path + "imputed_metrics.npy", imputed_metrics)
+        if imputed_metrics is not None:
+            np.save(result_path + "imputed_set.npy", imputed_set.to_numpy())
+            np.save(result_path + "imputed_metrics.npy", imputed_metrics)
         
         result_path += args.forecast_model + "/"
         os.makedirs(result_path, exist_ok=True)
@@ -205,7 +206,14 @@ if __name__ == "__main__":
         
         if check_if_imputed(args):
             print("Already imputed")
+            
             data.load_imputed_data()
+            
+            data.save_processed_data()
+            
+            TSLib(args)
+        
+            save_results(args, None, None)
         else:
             MissingSimulation(data, args)
             
@@ -217,10 +225,10 @@ if __name__ == "__main__":
             
             imputed_metrics = Evaluate(data.get_dev_set(), imputed_set)
             
-        data.save_processed_data()
+            data.save_processed_data()
+            
+            TSLib(args)
         
-        TSLib(args)
-        
-        save_results(args, imputed_metrics, data.get_imputed_set())
+            save_results(args, imputed_metrics, data.get_imputed_set())
         
         delete_temp()
