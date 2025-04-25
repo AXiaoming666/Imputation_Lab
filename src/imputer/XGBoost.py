@@ -63,7 +63,7 @@ def adaptive_param_learning(X_train: pd.DataFrame, y_train: pd.Series) -> dict:
         direction='minimize',
         sampler=optuna.samplers.TPESampler(multivariate=True)
     )
-    study.optimize(objective, n_trials=100, n_jobs=-1)
+    study.optimize(objective, n_trials=100, n_jobs=4)
 
     best_param = study.best_params
     best_param['objective'] = 'reg:squarederror'

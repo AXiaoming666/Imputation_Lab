@@ -20,7 +20,7 @@ def check_if_run(args: dict) -> bool:
             args["complete_num"] if args["dataset"] != "traffic" else args["complete_rate"],
             args["imputer"]
         )
-        if not os.path.exists(result_path + "imputed_set.csv"):
+        if not os.path.exists(result_path + "imputed_set.npy"):
             return False
         if not os.path.exists(result_path + "imputed_metrics.npy"):
             return False
