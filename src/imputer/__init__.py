@@ -1,3 +1,5 @@
+import pandas as pd
+
 from . import forward
 from . import mean
 from . import KNN
@@ -10,7 +12,7 @@ KNN_impute = KNN.KNN_impute
 XGBoost_impute = XGBoost.XGBoost_impute
 IIM_adaptive = IIM.IIM_adaptive
 
-def impute(data, method="Mean", **kwargs):
+def impute(data: pd.DataFrame, method: str="Mean", **kwargs) -> pd.DataFrame:
     """
     统一的插补接口，根据方法名称自动调用对应的插补函数
     

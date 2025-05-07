@@ -3,10 +3,12 @@ import statsmodels.api as sm
 from statsmodels.formula.api import ols
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 import matplotlib
 matplotlib.use('Agg')
 
 results = pd.read_csv('./results.csv')
+results = results[results['missing_rate'] != 0]
 
 def calculate_and_plot_partial_r2(formula, data, typ, title):
     model = ols(formula, data=data).fit()
@@ -45,23 +47,25 @@ def calculate_and_plot_partial_r2(formula, data, typ, title):
     
     return partial_r2
 
+os.makedirs('./visualization', exist_ok=True)
+
 # Generate plots for each model
 mse_factors = calculate_and_plot_partial_r2(
-    'forecast_mse ~ missing_rate * C(missing_type) * completeness_rate * C(imputation_method)',
+    'forecast_mse ~ dataset * missing_rate * C(missing_type) * complete_rate * C(imputer) * C(forecast_model)',
     results, 3, 'Partial R² for MSE by Experimental Factors'
 )
 
 mae_factors = calculate_and_plot_partial_r2(
-    'forecast_mae ~ missing_rate * C(missing_type) * completeness_rate * C(imputation_method)',
+    'forecast_mae ~ dataset * missing_rate * C(missing_type) * complete_rate * C(imputer) * C(forecast_model)',
     results, 3, 'Partial R² for MAE by Experimental Factors'
 )
 
 mse_metrics = calculate_and_plot_partial_r2(
-    'forecast_mse ~ imputed_rmse + imputed_mae + imputed_r2 + imputed_kl + imputed_ks + imputed_w2 + imputed_sliced_w2',
+    'forecast_mse ~ impute_rmse + impute_mae + impute_r2 + impute_kl_divergence + impute_ks_statistic + impute_w2_distance + impute_sliced_kl_divergence + impute_sliced_ks_statistic + impute_sliced_w2_distance',
     results, 2, 'Partial R² for MSE by Imputation Quality Metrics'
 )
 
 mae_metrics = calculate_and_plot_partial_r2(
-    'forecast_mae ~ imputed_rmse + imputed_mae + imputed_r2 + imputed_kl + imputed_ks + imputed_w2 + imputed_sliced_w2',
+    'forecast_mae ~ impute_rmse + impute_mae + impute_r2 + impute_kl_divergence + impute_ks_statistic + impute_w2_distance + impute_sliced_kl_divergence + impute_sliced_ks_statistic + impute_sliced_w2_distance',
     results, 2, 'Partial R² for MAE by Imputation Quality Metrics'
 )
