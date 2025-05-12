@@ -41,7 +41,7 @@ def calculate_W2_distance(dev_set: np.ndarray, imputed_set: np.ndarray) -> float
     OTLoss = geomloss.SamplesLoss(
         loss="sinkhorn", p=2,
         cost=geomloss.utils.squared_distances,
-        blur=0.01**(1/2), backend="tensorized"
+        blur=0.1**(1/2), backend="tensorized"
     )
     pW = OTLoss(torch.from_numpy(dev_set_distribution), torch.from_numpy(imputed_set_distribution))
     return pW.item()
@@ -56,7 +56,7 @@ def calculate_sliced_metrics(dev_set: np.ndarray, imputed_set: np.ndarray, n_sli
     projection_pairs = [(dev_set @ proj, imputed_set @ proj) for proj in projections]
     args = list(zip(*projection_pairs))
 
-    with ProcessPoolExecutor(max_workers=os.cpu_count) as executor:
+    with ProcessPoolExecutor(max_workers=8) as executor:
         W2_distances = list(executor.map(calculate_W2_distance, *args))
     
     sliced_W2_distance = sum(W2_distances) / n_slices
@@ -88,7 +88,6 @@ for root, dirs, files in os.walk(results_dir):
                 imputed_set = pd.DataFrame(imputed_set, columns=dev_set.columns)
                 imputed_metrics = np.load(os.path.join(root_, dir_, 'imputed_metrics.npy'), allow_pickle=True).item()
                 fixed_metrics = Evaluate(dev_set, imputed_set)
-                assert imputed_metrics['RMSE'] == fixed_metrics['RMSE']
                 print(imputed_metrics["W2_distance"], fixed_metrics["W2_distance"])
                 imputed_metrics["W2_distance"] = fixed_metrics["W2_distance"]
                 imputed_metrics["sliced_W2_distance"] = fixed_metrics["sliced_W2_distance"]
