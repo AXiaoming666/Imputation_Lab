@@ -2,7 +2,6 @@ import os
 import numpy as np
 import pandas as pd
 
-from src.data_loader import DataLoader
 from src.evaluation import Evaluate
 
 
