@@ -23,11 +23,6 @@ class DataLoader:
             true_pred = np.load("./results/exchange_rate/pred_true.npy")
             n_sample_res = true_pred.shape[0]
             self.n_sample_dev = self.original_data.shape[0] - n_sample_res
-        elif dataset == 'traffic':
-            self.original_data = pd.read_csv("./Time-Series-Library/dataset/traffic/traffic.csv")
-            true_pred = np.load("./results/traffic/pred_true.npy")
-            n_sample_res = true_pred.shape[0]
-            self.n_sample_dev = self.original_data.shape[0] - n_sample_res
         
         self.dev_set = self.original_data.iloc[:self.n_sample_dev, 1:].copy(deep=True)
 
@@ -98,7 +93,7 @@ class DataLoader:
             self.args.dataset,
             self.args.missing_rate,
             self.args.missing_type,
-            self.args.complete_num if self.args.dataset != "traffic" else self.args.complete_rate,
+            self.args.complete_num,
             self.args.imputer
         )
         imputed_set = np.load(result_path + "imputed_set.npy")

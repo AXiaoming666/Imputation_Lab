@@ -35,9 +35,6 @@ def TSLib(args: argparse.Namespace) -> subprocess.CompletedProcess:
         elif args.dataset == "illness":
             command += ["--root_path", "./dataset/illness",
                         "--data_path", "national_illness.csv"]
-        elif args.dataset == "traffic":
-            command += ["--root_path", "./dataset/traffic",
-                        "--data_path", "traffic.csv"]
     else:
         command += ["--root_path", "../temp/",
                     "--data_path", "processed_data.csv"]
@@ -56,13 +53,6 @@ def TSLib(args: argparse.Namespace) -> subprocess.CompletedProcess:
                     "--enc_in", "7",
                     "--dec_in", "7",
                     "--c_out", "7"]
-    elif args.dataset == "traffic":
-        command += ["--seq_len", "96",
-                    "--label_len", "48",
-                    "--pred_len", "96",
-                    "--enc_in", "862",
-                    "--dec_in", "862",
-                    "--c_out", "862"]
     
     if args.forecast_model == "TimesNet":
         command += ["--e_layers", "2",
@@ -121,7 +111,7 @@ def save_results(args: argparse.Namespace, imputed_metrics: dict|None, imputed_s
             args.dataset,
             args.missing_rate,
             args.missing_type,
-            args.complete_num if args.dataset != "traffic" else args.complete_rate,
+            args.complete_num,
             args.imputer
         )
         os.makedirs(result_path, exist_ok=True)
@@ -170,7 +160,7 @@ def check_if_imputed(args: argparse.Namespace) -> bool:
         args.dataset,
         args.missing_rate,
         args.missing_type,
-        args.complete_num if args.dataset != "traffic" else args.complete_rate,
+        args.complete_num,
         args.imputer
     )
     if not os.path.exists(result_path + "imputed_set.npy"):
@@ -185,7 +175,7 @@ if __name__ == "__main__":
     np.random.seed(fix_seed)
     
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=str, default="exchange_rate", choices=["exchange_rate", "illness", "traffic"], help="Name of dataset")
+    parser.add_argument("--dataset", type=str, default="exchange_rate", choices=["exchange_rate", "illness"], help="Name of dataset")
     parser.add_argument("--missing_rate", type=float, default=0.1, help="Missing rate in correpted features")
     parser.add_argument("--missing_type", type=str, default="MCAR", choices=["MCAR", "MAR", "F-MNAR", "D-MNAR"], help="Missing type")
     parser.add_argument("--complete_num", type=int, default=1, help="Number of features not to be corrupted")

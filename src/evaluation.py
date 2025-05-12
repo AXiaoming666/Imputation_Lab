@@ -75,7 +75,7 @@ def calculate_2D_KS_statistic(dev_set: np.ndarray, imputed_set: np.ndarray) -> f
     return statistic / dev_set.shape[1]
 
 
-def calculate_W2_distance(dev_set: np.ndarray, imputed_set: np.ndarray, batch_size: int = 1000) -> float:
+def calculate_W2_distance(dev_set: np.ndarray, imputed_set: np.ndarray, batch_size: int = 20000) -> float:
     batch_num = int(np.ceil(len(dev_set) / batch_size))
     dev_set = np.array_split(dev_set, batch_num)
     imputed_set = np.array_split(imputed_set, batch_num)
@@ -83,9 +83,9 @@ def calculate_W2_distance(dev_set: np.ndarray, imputed_set: np.ndarray, batch_si
     for i in range(batch_num):
         dev_set_batch = dev_set[i]
         imputed_set_batch = imputed_set[i]
-        w2_distance += calculate_W2_distance_batch(dev_set_batch, imputed_set_batch)
+        w2_distance += calculate_W2_distance_batch(dev_set_batch, imputed_set_batch) * len(dev_set_batch) / len(dev_set)
     
-    return w2_distance / batch_num
+    return w2_distance
 
 
 def calculate_W2_distance_batch(dev_set: np.ndarray, imputed_set: np.ndarray) -> float:
