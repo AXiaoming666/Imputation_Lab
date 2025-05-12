@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-import ot
+import torch
+import geomloss
 from scipy.stats import ks_2samp
 from concurrent.futures import ProcessPoolExecutor
 
@@ -75,25 +76,18 @@ def calculate_2D_KS_statistic(dev_set: np.ndarray, imputed_set: np.ndarray) -> f
     return statistic / dev_set.shape[1]
 
 
-def calculate_W2_distance(dev_set: np.ndarray, imputed_set: np.ndarray, batch_size: int = 20000) -> float:
-    batch_num = int(np.ceil(len(dev_set) / batch_size))
-    dev_set = np.array_split(dev_set, batch_num)
-    imputed_set = np.array_split(imputed_set, batch_num)
-    w2_distance = 0
-    for i in range(batch_num):
-        dev_set_batch = dev_set[i]
-        imputed_set_batch = imputed_set[i]
-        w2_distance += calculate_W2_distance_batch(dev_set_batch, imputed_set_batch) * len(dev_set_batch) / len(dev_set)
+def calculate_W2_distance(dev_set: np.ndarray, imputed_set: np.ndarray) -> float:
+    dev_set_distribution = data2distribution(dev_set)
+    imputed_set_distribution = data2distribution(imputed_set)
     
-    return w2_distance
-
-
-def calculate_W2_distance_batch(dev_set: np.ndarray, imputed_set: np.ndarray) -> float:
-    dev_distribution = data2distribution(dev_set)
-    imputed_distribution = data2distribution(imputed_set)
-    M = ot.dist(dev_distribution[:, None], imputed_distribution[:, None])
-    w2_distance = ot.emd2(dev_distribution, imputed_distribution, M, numItermax=1000000000)
-    return w2_distance
+    OTLoss = geomloss.SamplesLoss(
+        loss="sinkhorn", p=2,
+        cost=geomloss.utils.squared_distances,
+        blur=0.1**(1/2), backend="tensorized"
+    )
+    pW = OTLoss(torch.from_numpy(dev_set_distribution), torch.from_numpy(imputed_set_distribution))
+    print(pW.item())
+    return pW.item()
 
 
 def calculate_2D_W2_distance(dev_set: np.ndarray, imputed_set: np.ndarray) -> float:
