@@ -77,16 +77,15 @@ def calculate_2D_KS_statistic(dev_set: np.ndarray, imputed_set: np.ndarray) -> f
 
 
 def calculate_W2_distance(dev_set: np.ndarray, imputed_set: np.ndarray) -> float:
-    dev_set_distribution = data2distribution(dev_set)
-    imputed_set_distribution = data2distribution(imputed_set)
+    dev_set_distribution = data2distribution(dev_set).reshape(-1, 1)
+    imputed_set_distribution = data2distribution(imputed_set).reshape(-1, 1)
     
     OTLoss = geomloss.SamplesLoss(
         loss="sinkhorn", p=2,
         cost=geomloss.utils.squared_distances,
-        blur=0.1**(1/2), backend="tensorized"
+        blur=0.01**(1/2), backend="tensorized"
     )
     pW = OTLoss(torch.from_numpy(dev_set_distribution), torch.from_numpy(imputed_set_distribution))
-    print(pW.item())
     return pW.item()
 
 

@@ -30,7 +30,7 @@ for root, dirs, files in os.walk(results_dir):
                 imputed_metrics = np.load(os.path.join(root_, dir_, 'imputed_metrics.npy'), allow_pickle=True).item()
                 fixed_metrics = Evaluate(dev_set, imputed_set)
                 assert imputed_metrics['RMSE'] == fixed_metrics['RMSE']
-                imputed_metrics["W2_distance"] = fixed_metrics["W2_distance"]
                 print(imputed_metrics["W2_distance"], fixed_metrics["W2_distance"])
+                imputed_metrics["W2_distance"] = fixed_metrics["W2_distance"]
                 imputed_metrics["sliced_W2_distance"] = fixed_metrics["sliced_W2_distance"]
                 np.save(os.path.join(root_, dir_, 'imputed_metrics.npy'), imputed_metrics)
