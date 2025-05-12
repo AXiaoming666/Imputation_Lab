@@ -2,70 +2,75 @@ import pandas as pd
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
 import matplotlib.pyplot as plt
-import seaborn as sns
-import os
 import matplotlib
 matplotlib.use('Agg')
+
+def explained_deviation(anova_table):
+    explained_deviations = {}
+    total_ss = anova_table['sum_sq'].sum()
+    for factor in anova_table.index[:-1]:
+        ss_factor = anova_table.loc[factor, 'sum_sq']
+        deviation = ss_factor / total_ss
+        explained_deviations[factor] = deviation
+    return explained_deviations
+
+# 新增函数，用于绘制偏 eta 平方的柱状图
+def plot_explained_deviation(partial_etas, title):
+    factors = list(partial_etas.keys())
+    eta_values = list(partial_etas.values())
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(factors, eta_values, color='blue')
+    plt.xlabel('Factors')
+    plt.ylabel('Deviance')
+    plt.xticks(rotation=45, fontsize=8)
+    plt.tight_layout()
+    plt.savefig(f'{title.replace(" ", "_")}.png')
+    plt.close()
 
 results = pd.read_csv('./results.csv')
 results = results[results['missing_rate'] != 0]
 
-def calculate_and_plot_partial_r2(formula, data, typ, title):
-    model = ols(formula, data=data).fit()
-    anova_results = sm.stats.anova_lm(model, typ=typ)
-    
-    ss_total = model.ess + model.ssr
-    partial_r2 = pd.DataFrame({
-        'Partial_R2': anova_results['sum_sq'] / ss_total
-    })
-    
-    # Filter out Residual and Intercept
-    partial_r2 = partial_r2.drop(['Residual', 'Intercept'], errors='ignore')
-    partial_r2 = partial_r2.sort_values('Partial_R2', ascending=True)  # Ascending for better visualization
-    
-    # Create plot
-    plt.figure(figsize=(10, 6))
-    ax = sns.barplot(x=partial_r2['Partial_R2'], y=partial_r2.index, palette='viridis', hue=partial_r2.index, legend=False)
-    plt.title(title)
-    plt.xlabel('Partial R²')
-    plt.ylabel('Factors')
-    plt.tight_layout()
-    
-    # Add values to end of bars
-    # Add values to end of bars for most bars, but put max value inside the bar
-    max_idx = partial_r2['Partial_R2'].idxmax()
-    for i, (idx, v) in enumerate(zip(partial_r2.index, partial_r2['Partial_R2'])):
-        if idx == max_idx:
-            # For max value, place text inside the bar with contrasting color
-            ax.text(v - 0.001, i, f"{v:.4f}", va='center', ha='right')
-        else:
-            # For other values, keep them at the end of bars
-            ax.text(v + 0.001, i, f"{v:.4f}", va='center')
-    
-    plt.savefig(f'./visualization/{title.replace(" ", "_")}.png', dpi=300)
-    plt.close()
-    
-    return partial_r2
+result = results[results["dataset"] == "exchange_rate"]
+model = ols('forecast_mse ~ missing_rate * C(missing_type) * complete_rate * C(imputer) * C(forecast_model)', data=result).fit()
+anova_table = sm.stats.anova_lm(model, typ=2)
+explained_deviations = explained_deviation(anova_table)
+plot_explained_deviation(explained_deviations, 'ANOVA for MSE by factors in Exchange Rate')
 
-os.makedirs('./visualization', exist_ok=True)
+model = ols('forecast_mae ~ missing_rate * C(missing_type) * complete_rate * C(imputer) * C(forecast_model)', data=result).fit()
+anova_table = sm.stats.anova_lm(model, typ=2)
+explained_deviations = explained_deviation(anova_table)
+plot_explained_deviation(explained_deviations, 'ANOVA for MAE by factors in Exchange Rate')
 
-# Generate plots for each model
-mse_factors = calculate_and_plot_partial_r2(
-    'forecast_mse ~ dataset * missing_rate * C(missing_type) * complete_rate * C(imputer) * C(forecast_model)',
-    results, 3, 'Partial R² for MSE by Experimental Factors'
-)
+model = ols('forecast_mse ~ impute_rmse + impute_mae + impute_r2 + impute_kl_divergence + impute_ks_statistic + impute_w2_distance + impute_sliced_kl_divergence + impute_sliced_ks_statistic + impute_sliced_w2_distance', data=result).fit()
+anova_table = sm.stats.anova_lm(model, typ=2)
+explained_deviations = explained_deviation(anova_table)
+plot_explained_deviation(explained_deviations, 'ANOVA for MSE by imputation metrics in Exchange Rate')
 
-mae_factors = calculate_and_plot_partial_r2(
-    'forecast_mae ~ dataset * missing_rate * C(missing_type) * complete_rate * C(imputer) * C(forecast_model)',
-    results, 3, 'Partial R² for MAE by Experimental Factors'
-)
+model = ols('forecast_mae ~ impute_rmse + impute_mae + impute_r2 + impute_kl_divergence + impute_ks_statistic + impute_w2_distance + impute_sliced_kl_divergence + impute_sliced_ks_statistic + impute_sliced_w2_distance', data=result).fit()
+anova_table = sm.stats.anova_lm(model, typ=2)
+explained_deviations = explained_deviation(anova_table)
+plot_explained_deviation(explained_deviations, 'ANOVA for MAE by imputation metrics in Exchange Rate')
 
-mse_metrics = calculate_and_plot_partial_r2(
-    'forecast_mse ~ impute_rmse + impute_mae + impute_r2 + impute_kl_divergence + impute_ks_statistic + impute_w2_distance + impute_sliced_kl_divergence + impute_sliced_ks_statistic + impute_sliced_w2_distance',
-    results, 2, 'Partial R² for MSE by Imputation Quality Metrics'
-)
 
-mae_metrics = calculate_and_plot_partial_r2(
-    'forecast_mae ~ impute_rmse + impute_mae + impute_r2 + impute_kl_divergence + impute_ks_statistic + impute_w2_distance + impute_sliced_kl_divergence + impute_sliced_ks_statistic + impute_sliced_w2_distance',
-    results, 2, 'Partial R² for MAE by Imputation Quality Metrics'
-)
+
+result = results[results["dataset"] == "illness"]
+model = ols('forecast_mse ~ missing_rate * C(missing_type) * complete_rate * C(imputer) * C(forecast_model)', data=result).fit()
+anova_table = sm.stats.anova_lm(model, typ=2)
+explained_deviations = explained_deviation(anova_table)
+plot_explained_deviation(explained_deviations, 'ANOVA for MSE by factors in Illness')
+
+model = ols('forecast_mae ~ missing_rate * C(missing_type) * complete_rate * C(imputer) * C(forecast_model)', data=result).fit()
+anova_table = sm.stats.anova_lm(model, typ=2)
+explained_deviations = explained_deviation(anova_table)
+plot_explained_deviation(explained_deviations, 'ANOVA for MAE by factors in Illness')
+
+model = ols('forecast_mse ~ impute_rmse + impute_mae + impute_r2 + impute_kl_divergence + impute_ks_statistic + impute_w2_distance + impute_sliced_kl_divergence + impute_sliced_ks_statistic + impute_sliced_w2_distance', data=result).fit()
+anova_table = sm.stats.anova_lm(model, typ=2)
+explained_deviations = explained_deviation(anova_table)
+plot_explained_deviation(explained_deviations, 'ANOVA for MSE by imputation metrics in Illness')
+
+model = ols('forecast_mae ~ impute_rmse + impute_mae + impute_r2 + impute_kl_divergence + impute_ks_statistic + impute_w2_distance + impute_sliced_kl_divergence + impute_sliced_ks_statistic + impute_sliced_w2_distance', data=result).fit()
+anova_table = sm.stats.anova_lm(model, typ=2)
+explained_deviations = explained_deviation(anova_table)
+plot_explained_deviation(explained_deviations, 'ANOVA for MAE by imputation metrics in Illness')
