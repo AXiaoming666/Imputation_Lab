@@ -80,13 +80,18 @@ def calculate_W2_distance(dev_set: np.ndarray, imputed_set: np.ndarray) -> float
     dev_set_distribution = data2distribution(dev_set).reshape(-1, 1)
     imputed_set_distribution = data2distribution(imputed_set).reshape(-1, 1)
     
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     OTLoss = geomloss.SamplesLoss(
         loss="sinkhorn", p=2,
         cost=geomloss.utils.squared_distances,
         blur=0.01**(1/2), backend="tensorized"
     )
-    pW = OTLoss(torch.from_numpy(dev_set_distribution), torch.from_numpy(imputed_set_distribution))
-    return pW.item()
+    OTLoss.to(device)
+    dev_set_tensor = torch.from_numpy(dev_set_distribution).to(device)
+    imputed_set_tensor = torch.from_numpy(imputed_set_distribution).to(device)
+    
+    pW = OTLoss(dev_set_tensor, imputed_set_tensor)
+    return pW.cpu().item()
 
 
 def calculate_2D_W2_distance(dev_set: np.ndarray, imputed_set: np.ndarray) -> float:
