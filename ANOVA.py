@@ -3,9 +3,13 @@ import statsmodels.api as sm
 from statsmodels.formula.api import ols
 import matplotlib.pyplot as plt
 import matplotlib
-import seaborn as sns  # 新增导入seaborn库
-from scipy.stats import pearsonr  # 新增导入pearsonr函数
 matplotlib.use('Agg')
+import seaborn as sns
+from scipy.stats import pearsonr
+import os
+
+save_path = './visualization/ANOVA/'
+os.makedirs(save_path, exist_ok=True)
 
 def explained_deviation(anova_table):
     explained_deviations = {}
@@ -19,14 +23,17 @@ def explained_deviation(anova_table):
 def plot_explained_deviation(partial_etas, title):
     factors = list(partial_etas.keys())
     eta_values = list(partial_etas.values())
+    
+    combined = list(zip(factors, eta_values))
+    combined.sort(key=lambda x: x[1], reverse=True)
+    factors, eta_values = zip(*combined)
 
     plt.figure(figsize=(10, 6))
-    plt.bar(factors, eta_values, color='blue')
-    plt.xlabel('Factors')
-    plt.ylabel('Deviance')
-    plt.xticks(rotation=45, fontsize=8)
+    plt.barh(factors, eta_values, color='blue')
+    plt.ylabel('Factors')
+    plt.xlabel('Deviance')
     plt.tight_layout()
-    plt.savefig(f'{title.replace(" ", "_")}.png')
+    plt.savefig(f'{save_path}{title.replace(" ", "_")}.png')
     plt.close()
 
 # 新增函数：计算皮尔逊相关系数
@@ -50,7 +57,7 @@ def plot_corr_heatmap(corr_matrix, title):
     sns.heatmap(corr_matrix.astype(float), annot=True, cmap='coolwarm', vmin=-1, vmax=1)
     plt.title(title)
     plt.tight_layout()
-    plt.savefig(f'{title.replace(" ", "_")}_corr_heatmap.png')
+    plt.savefig(f'{save_path}{title.replace(" ", "_")}_corr_heatmap.png')
     plt.close()
 
 results = pd.read_csv('./results.csv')
@@ -63,6 +70,10 @@ for dataset in datasets:
 
     # 计算相关系数
     corr_matrix, p_value_matrix = calculate_pearson_corr(result)
+    print(f"Pearson Correlation Matrix for {dataset}:")
+    print(corr_matrix)
+    print(f"P-Value Matrix for {dataset}:")
+    print(p_value_matrix)
 
     # 绘制相关系数热力图
     plot_corr_heatmap(corr_matrix, f'Pearson Correlation between Imputation and Forecast Metrics in {dataset}')
@@ -75,4 +86,4 @@ for dataset in datasets:
     model = ols('forecast_mae ~ missing_rate * C(missing_type) * complete_rate * C(imputer) * C(forecast_model)', data=result).fit()
     anova_table = sm.stats.anova_lm(model, typ=2)
     explained_deviations = explained_deviation(anova_table)
-    plot_explained_deviation(explained_deviations, 'ANOVA for MAE by factors in Illness')
+    plot_explained_deviation(explained_deviations, f'ANOVA for MAE by factors in {dataset}')
