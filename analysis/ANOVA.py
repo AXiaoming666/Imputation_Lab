@@ -10,7 +10,6 @@ import os
 import re
 
 save_path = './visualization/ANOVA/'
-os.makedirs(save_path, exist_ok=True)
 
 def explained_deviation(anova_table):
     explained_deviations = {}
@@ -92,25 +91,28 @@ def plot_corr_heatmap(corr_matrix, title):
     plt.savefig(f'{save_path}{title.replace(" ", "_")}_corr_heatmap.png')
     plt.close()
 
-results = pd.read_csv('./results.csv')
-results = results[results['missing_rate'] != 0]
+if __name__ == '__main__':
+    
+    os.makedirs(save_path, exist_ok=True)
+    results = pd.read_csv('./results.csv')
+    results = results[results['missing_rate'] != 0]
 
-# 对每个数据集进行分析
-datasets = ["exchange_rate", "illness"]
-for dataset in datasets:
-    result = results[results["dataset"] == dataset]
+    # 对每个数据集进行分析
+    datasets = ["exchange_rate", "illness"]
+    for dataset in datasets:
+        result = results[results["dataset"] == dataset]
 
-    # 计算相关系数
-    corr_matrix, p_value_matrix = calculate_pearson_corr(result)
-    # 绘制相关系数热力图
-    plot_corr_heatmap(corr_matrix, f'Pearson Correlation between Imputation and Forecast Metrics in {dataset}')
+        # 计算相关系数
+        corr_matrix, p_value_matrix = calculate_pearson_corr(result)
+        # 绘制相关系数热力图
+        plot_corr_heatmap(corr_matrix, f'Pearson Correlation between Imputation and Forecast Metrics in {dataset}')
 
-    model = ols('forecast_mse ~ missing_rate * C(missing_type) * complete_rate * C(imputer) * C(forecast_model)', data=result).fit()
-    anova_table = sm.stats.anova_lm(model, typ=2)
-    explained_deviations = explained_deviation(anova_table)
-    plot_explained_deviation(explained_deviations, f'ANOVA for MSE by factors in {dataset}')
+        model = ols('forecast_mse ~ missing_rate * C(missing_type) * complete_rate * C(imputer) * C(forecast_model)', data=result).fit()
+        anova_table = sm.stats.anova_lm(model, typ=2)
+        explained_deviations = explained_deviation(anova_table)
+        plot_explained_deviation(explained_deviations, f'ANOVA for MSE by factors in {dataset}')
 
-    model = ols('forecast_mae ~ missing_rate * C(missing_type) * complete_rate * C(imputer) * C(forecast_model)', data=result).fit()
-    anova_table = sm.stats.anova_lm(model, typ=2)
-    explained_deviations = explained_deviation(anova_table)
-    plot_explained_deviation(explained_deviations, f'ANOVA for MAE by factors in {dataset}')
+        model = ols('forecast_mae ~ missing_rate * C(missing_type) * complete_rate * C(imputer) * C(forecast_model)', data=result).fit()
+        anova_table = sm.stats.anova_lm(model, typ=2)
+        explained_deviations = explained_deviation(anova_table)
+        plot_explained_deviation(explained_deviations, f'ANOVA for MAE by factors in {dataset}')

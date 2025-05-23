@@ -1,198 +1,96 @@
 import pandas as pd
-import os
 import matplotlib.pyplot as plt
+import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
-import json
+from matplotlib.lines import Line2D
 
+save_path = 'visualization/'
 
-dataframes = []
-
-for foldername, subfolders, filenames in os.walk('./results'):
-    for filename in filenames:
-        with open(os.path.join(foldername, filename), 'r', encoding='utf-8') as file:
-            data = json.load(file)
-            df = pd.json_normalize(data)
-            dataframes.append(df)
-
-combined_df = pd.concat(dataframes, ignore_index=True)
-
-df_renamed = combined_df.copy()
-column_mapping = {}
-for col in df.columns:
-    new_col = col.replace('.', '_')
-    new_col = new_col.replace(' ', '_')
-    column_mapping[col] = new_col
-    df_renamed[new_col] = combined_df[col]
-
-for col in df.columns:
-    if col in df_renamed.columns:
-        df_renamed.drop(columns=[col], inplace=True, errors='ignore')
-
-mse_base = 0.10529112070798874
-mae_base = 0.23513168096542358
-
-def scatter_plot(
-    config_param='missing_rate',
-    metrics_param='mse',
-    aborted_methods=None
-):
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    configs = sorted(df_renamed[f'config_{config_param}'].unique())
-    imputation_methods = sorted(df_renamed['config_imputation_method'].unique())
-    if aborted_methods is not None:
-        imputation_methods = [method for method in imputation_methods if method not in aborted_methods]
+if __name__ == '__main__':
+    results = pd.read_csv('results.csv')
     
-    colors = plt.cm.tab10(range(len(imputation_methods)))
-    color_dict = dict(zip(imputation_methods, colors))
+    for dataset in results['dataset'].unique():
+        for forecast_metric in ['forecast_mse', 'forecast_mae']:
+            result = results[(results['dataset'] == dataset)]
 
-    # Set up the plot
-    ax.set_ylabel(metrics_param.upper())
-    ax.set_xlabel(config_param.replace("_", " ").title())
-    ax.set_title(f'{metrics_param.upper()} by Imputation Method and {config_param.replace("_", " ").title()}')
-    
-    # Group data for box plot
-    grouped_data = []
-    labels = []
-    positions = []
-    
-    # Calculate positions for proper alignment
-    method_count = len(imputation_methods)
-    box_width = 0.8  # width of each box
-    group_width = box_width * method_count
-    
-    for i, config in enumerate(configs):
-        config_center = i  # Center of each config group
-        
-        for j, imputation_method in enumerate(imputation_methods):
-            # Position each boxplot within its config group
-            position = config_center + (j - method_count/2 + 0.5) * box_width / method_count
+            benchmark = result[result["missing_rate"] == 0][["forecast_model", forecast_metric]]
+
+            result = result[result["missing_rate"]!= 0]
             
-            subset = df_renamed[(df_renamed['config_imputation_method'] == imputation_method) & 
-                                (df_renamed[f'config_{config_param}'] == config)]
-            if not subset.empty:
-                if metrics_param == 'mse':
-                    data = subset['forecast_metrics_mse']
-                elif metrics_param == 'mae':
-                    data = subset['forecast_metrics_mae']
+            # 计算每个数据集、forecast_model 和 missing_rate 组合下的 forecast_metric_value 均值和标准差
+            grouped_data = result.groupby(['forecast_model','missing_rate'])[forecast_metric].agg(['mean','std']).reset_index()
+            
+            # 设置图片清晰度
+            plt.rcParams['figure.dpi'] = 300
+            
+            # 创建画布，设置 margin_titles 为 True，避免图例被覆盖，同时调整宽高比
+            g = sns.FacetGrid(grouped_data, margin_titles=True, height=5, aspect=1.7)
+            
+            # 在每个子图上绘制散点图，点的大小与标准差成正比
+            g.map_dataframe(sns.scatterplot, x='missing_rate', y='mean', size='std', hue='forecast_model', palette='bright', sizes=(20, 200))
+            
+            # 添加浅色网格线
+            for ax in g.axes.flat:
+                ax.grid(True, color='lightgray', linestyle='--', alpha=0.7)
                 
-                grouped_data.append(data)
-                labels.append(f"{imputation_method}_{config}")
-                positions.append(position)
-    
-    # Create box plot
-    boxplot = ax.boxplot(grouped_data, positions=positions, patch_artist=True, 
-                         showfliers=False, widths=box_width/method_count*0.9)
-    
-    # Color boxes by imputation method
-    method_boxes = {}
-    for i, (box, label) in enumerate(zip(boxplot['boxes'], labels)):
-        method = label.split('_')[0]
-        box.set(facecolor=color_dict[method])
-        if method not in method_boxes:
-            method_boxes[method] = box
-    
-    # Add baseline line
-    metrics_base = mse_base if metrics_param == 'mse' else mae_base
-    ax.axhline(y=metrics_base, color='r', linestyle='--', 
-               label=f'Baseline {metrics_param.upper()}: {metrics_base:.4f}')
-    
-    # Set x-ticks at the center of each config group
-    ax.set_xticks(range(len(configs)))
-    ax.set_xticklabels(configs)
-    
-    # Create custom legend for imputation methods
-    handles = [method_boxes[method] for method in imputation_methods]
-    ax.legend(handles, imputation_methods, loc='best')
-    
-    # Add a grid for better readability
-    ax.grid(True, linestyle='--', alpha=0.7)
-    
-    plt.tight_layout()
-    
-    # Create filename with proper handling of None
-    aborted_str = "" if aborted_methods is None else f"_without_{'_'.join(aborted_methods)}"
-    plt.savefig(f'./visualization/{metrics_param.upper()}_{config_param}{aborted_str}.png')
-    plt.close(fig)
+            # 获取图例句柄和标签
+            handles, labels = g.axes[0, 0].get_legend_handles_labels()
+            
+            labels[labels.index('forecast_model')] = 'forecast_model'
+            labels[labels.index('std')] ='standard_deviation'
+            
+            # 找到标准差图例的起始和结束索引
+            std_start_idx = labels.index('standard_deviation')
+            std_end_idx = next((i for i, label in enumerate(labels[std_start_idx:], start=std_start_idx) if label == labels[0]), len(labels))
+            
+            # 筛选出 3 个不同大小的标准差图例
+            std_handles = handles[std_start_idx:std_end_idx]
+            std_labels = labels[std_start_idx:std_end_idx]
+            num_std_legend = 3
+            step = len(std_handles) // num_std_legend if len(std_handles) > num_std_legend - 1 else 1
+            selected_std_handles = [std_handles[0]] + [std_handles[i * step] for i in range(1, num_std_legend)] + [std_handles[-1]]
+            selected_std_labels = [std_labels[0]] + [std_labels[i * step] for i in range(1, num_std_legend)] + [std_labels[-1]]
+            
+            # 移除原有的标准差图例
+            handles = handles[:std_start_idx] + handles[std_end_idx:]
+            labels = labels[:std_start_idx] + labels[std_end_idx:]
+            
+            # 添加筛选后的标准差图例
+            handles = handles[:std_start_idx] + selected_std_handles + handles[std_start_idx + 1:]
+            labels = labels[:std_start_idx] + selected_std_labels + labels[std_start_idx + 1:]
+            
+            # 创建一个从模型名称到图例句柄的映射
+            model_to_handle = dict(zip(labels, handles))
+            
+            # 新增黑色基准误差线的图例句柄和标签，仅用于图例
+            benchmark_line = Line2D([0], [0], color='black', linestyle='--', alpha=0.7)
+            benchmark_handles = [benchmark_line]
+            benchmark_labels = ['benchmark']
+            
+            # 为每个预测模型绘制基准误差线，保持原有颜色
+            for model in benchmark['forecast_model'].unique():
+                model_benchmark = benchmark[benchmark['forecast_model'] == model][forecast_metric].values[0]
+                if model in model_to_handle:
+                    color = model_to_handle[model].get_color()
+                    g.axes[0, 0].axhline(y=model_benchmark, color=color, linestyle='--', alpha=0.7)
 
+            # 合并图例句柄和标签
+            handles.extend(benchmark_handles)
+            labels.extend(benchmark_labels)
 
-def box_plot():
-    # Create a figure with subplots for MSE and MAE
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 8))
-    
-    # Get unique imputation methods
-    imputation_methods = sorted(df_renamed['config_imputation_method'].unique())
-    
-    # Group data by imputation method for boxplots
-    rmse_data = [df_renamed[df_renamed['config_imputation_method'] == method]['imputed_metrics_RMSE'] 
-                for method in imputation_methods]
-    mae_data = [df_renamed[df_renamed['config_imputation_method'] == method]['imputed_metrics_MAE'] 
-                for method in imputation_methods]
-    
-    # Create boxplots with showfliers=False to hide outliers
-    ax1.boxplot(rmse_data, tick_labels=imputation_methods, showfliers=False)
-    ax1.set_title('RMSE by Imputation Method')
-    ax1.set_ylabel('RMSE')
-    ax1.grid(True, linestyle='--', alpha=0.7)
-    
-    ax2.boxplot(mae_data, tick_labels=imputation_methods, showfliers=False)
-    ax2.set_title('MAE by Imputation Method')
-    ax2.set_ylabel('MAE')
-    ax2.grid(True, linestyle='--', alpha=0.7)
-    
-    # Rotate x-axis labels for better readability
-    for ax in [ax1, ax2]:
-        ax.set_xticklabels(imputation_methods, rotation=45, ha='right')
-    
-    plt.tight_layout()
-    plt.savefig('./visualization/boxplot_I.png')
-    plt.close(fig)
-    
-    
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 8))
-    KL_divergence_data = [df_renamed[df_renamed['config_imputation_method'] == method]['imputed_metrics_KL_divergence'] 
-                          for method in imputation_methods]
-    KS_statistic_data = [df_renamed[df_renamed['config_imputation_method'] == method]['imputed_metrics_KS_statistic'] 
-                         for method in imputation_methods]
-    W2_distance_data = [df_renamed[df_renamed['config_imputation_method'] == method]['imputed_metrics_W2_distance'] 
-                        for method in imputation_methods]
-    ax1.boxplot(KL_divergence_data, tick_labels=imputation_methods, showfliers=False)
-    ax1.set_title('KL Divergence by Imputation Method')
-    ax1.set_ylabel('KL Divergence')
-    ax1.grid(True, linestyle='--', alpha=0.7)
-    ax2.boxplot(KS_statistic_data, tick_labels=imputation_methods, showfliers=False)
-    ax2.set_title('KS Statistic by Imputation Method')
-    ax2.set_ylabel('KS Statistic')
-    ax2.grid(True, linestyle='--', alpha=0.7)
-    ax3.boxplot(W2_distance_data, tick_labels=imputation_methods, showfliers=False)
-    ax3.set_title('W2 Distance by Imputation Method')
-    ax3.set_ylabel('W2 Distance')
-    ax3.grid(True, linestyle='--', alpha=0.7)
-    for ax in [ax1, ax2, ax3]:
-        ax.set_xticklabels(imputation_methods, rotation=45, ha='right')
-    plt.tight_layout()
-    plt.savefig('./visualization/boxplot_II.png')
-    plt.close(fig)
-    
-    fig, ax1 = plt.subplots(1, 1, figsize=(15, 8))
-    Sliced_Wasserstein_distance_data = [df_renamed[df_renamed['config_imputation_method'] == method]['imputed_metrics_Sliced_Wasserstein_distance']
-                                        for method in imputation_methods]
-    ax1.boxplot(Sliced_Wasserstein_distance_data, tick_labels=imputation_methods, showfliers=False)
-    ax1.set_title('Sliced Wasserstein Distance by Imputation Method')
-    ax1.set_ylabel('Sliced Wasserstein Distance')
-    ax1.grid(True, linestyle='--', alpha=0.7)
-    for ax in [ax1]:
-        ax.set_xticklabels(imputation_methods, rotation=45, ha='right')
-    plt.tight_layout()
-    plt.savefig('./visualization/boxplot_III.png')
-    plt.close(fig)
-    
+            # 手动添加图例，调整位置和布局
+            # 减少列数以避免图例过于拥挤
+            plt.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.45, 1.1), ncol=len(handles), frameon=False, fontsize='x-small', columnspacing=0.5)
 
-if __name__ == "__main__":
-    os.makedirs('./visualization', exist_ok=True)
-    for config_param in ['missing_rate', 'completeness_rate', 'missing_type']:
-        for metrics_param in ['mse', 'mae']:
-            for aborted_methods in [None, ['mean'], ['knn', 'mean', 'xgboost', 'IIM']]:
-                scatter_plot(config_param=config_param, metrics_param=metrics_param, aborted_methods=aborted_methods)
-    box_plot()
+            # 设置轴标签
+            g.set_axis_labels('missing_rate', forecast_metric)
+
+            g.figure.suptitle(f'{forecast_metric} vs forecast_model in {dataset}', y=0.95)
+
+            # 调整子图布局，为标题和图例腾出更多空间
+            plt.subplots_adjust(top=0.83)
+
+            # 显示图形
+            plt.savefig(f'{save_path}{dataset}_{forecast_metric}_vs_forecast_model.png')
+            plt.close()  # 关闭当前图形，避免内存泄漏
